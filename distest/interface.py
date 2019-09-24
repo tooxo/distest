@@ -223,6 +223,7 @@ class TestInterface:
             "video",
             "image",
             "thumbnail",
+            "fields"
         ]
         # View all (visible) attributes visualized here: https://imgur.com/a/tD7Ibc4
 
@@ -266,6 +267,13 @@ class TestInterface:
                         raise ResponseDidNotMatchError(
                             "The author attribute did't match"
                         )
+                elif attribute == "fields":
+                    pairs = []
+                    for field in matches.fields:
+                        pairs.append({"name": field.name, "value": field.value})
+                    for field in embed.fields:
+                        if {"name": field.name, "value": field.value} not in pairs:
+                            raise ResponseDidNotMatchError
                 elif not getattr(embed, attribute) == getattr(matches, attribute):
                     print(
                         "Did not match:",
