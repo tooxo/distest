@@ -191,7 +191,7 @@ class TestInterface:
             return await assert_function(message, argument_list[0])
         elif len(argument_list) == 2:
             return await assert_function(
-                message, argument_list[0], attributes_to_prove=argument_list[1]
+                message, argument_list[0], attributes_to_check=argument_list[1]
             )
         else:
             raise SyntaxError("Invalid Number of Arguments")
@@ -200,13 +200,13 @@ class TestInterface:
         self,
         message: discord.Message,
         matches: discord.Embed,
-        attributes_to_prove: list = None,
+        attributes_to_check: list = None,
     ):
         """If ``matches`` doesn't match the embed of ``message``, fail the test.
 
         :param message: original message
         :param matches: embed object to compare to
-        :param attributes_to_prove: a string list with the attributes of the embed, which are to compare
+        :param attributes_to_check: a string list with the attributes of the embed, which are to compare
             This are all the Attributes you can prove: "title", "description", "url", "color",
             "author", "video", "image" and "thumbnail".
         :return: message
@@ -230,8 +230,8 @@ class TestInterface:
         attributes = []
 
         # Proves, if the attribute provided by the user is a valid attribute to check
-        if attributes_to_prove is not None:
-            for value in attributes_to_prove:
+        if attributes_to_check is not None:
+            for value in attributes_to_check:
                 if value not in possible_attributes:
                     raise NotImplementedError(
                         '"' + value + '" is not a possible value.'
@@ -448,3 +448,11 @@ class TestInterface:
             reaction, _ = reaction
             if reaction.emoji == "\u274c":
                 raise HumanResponseFailure
+
+    async def assert_reply_embed_equals(
+        self, message: str, equals: discord.Embed, attributes_to_check: list = None
+    ):
+        response = await self.wait_for_reply(message)
+        return await self.assert_embed_equals(
+            response, equals, attributes_to_check=attributes_to_check
+        )
