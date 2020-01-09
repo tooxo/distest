@@ -66,6 +66,7 @@ class TestInterface:
     :param discord.Client client: The discord client of the tester.
     :param discord.TextChannel channel: The discord channel in which to run the tests.
     :param discord.Member target: The bot we're testing.
+
     """
 
     def __init__(self, client, channel, target):
@@ -225,7 +226,7 @@ class TestInterface:
             "video",
             "image",
             "thumbnail",
-            "fields"
+            "fields",
         ]
         # View all (visible) attributes visualized here: https://imgur.com/a/tD7Ibc4
 
