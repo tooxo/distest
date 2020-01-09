@@ -48,9 +48,9 @@ class Test:
 
 
 class TestInterface:
-    """ All the tests, and some supporting functions. Tests are designed to be run
-    by the tester and mixed together in order to actually test the bot.
+    """All the tests, and some supporting functions.
 
+    Tests are designed to be run by the tester and mixed together in order to actually test the bot.
     .. note::
         In addition to the tests failing due to their own reasons, all tests will also fail if they timeout.
         This period is specified when the bot is run.
@@ -63,10 +63,10 @@ class TestInterface:
         ``assert_reply_*`` tests will send a message with the passed content, while ``assert_message_*`` tests require a
         ``Message`` to be passed to them. This allows for more flexibility when you need it and an easier
         option when you don't.
+
     :param discord.Client client: The discord client of the tester.
     :param discord.TextChannel channel: The discord channel in which to run the tests.
     :param discord.Member target: The bot we're testing.
-
     """
 
     def __init__(self, client, channel, target):
@@ -95,7 +95,7 @@ class TestInterface:
         :return:
         """
         self.voice_channel: discord.VoiceChannel = self.client.get_channel(channel)
-        if self.voice_channel.guild.voice_client is not None:
+        if self.voice_channel.guild.voice_client is None:
             self.voice_client: discord.VoiceClient = await self.voice_channel.connect()
         else:
             self.voice_channel: discord.voice_client = self.voice_channel.guild.voice_client
