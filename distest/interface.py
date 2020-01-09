@@ -92,14 +92,16 @@ class TestInterface:
         """
         Connect to a given VoiceChannel
         :param channel: The VoiceChannel to connect to.
-        :return:
+        :return: returns the voice client
         """
         self.voice_channel: discord.VoiceChannel = self.client.get_channel(channel)
         if self.voice_channel.guild.voice_client is None:
             self.voice_client: discord.VoiceClient = await self.voice_channel.connect()
-
         else:
             self.voice_client: discord.voice_client = self.voice_channel.guild.voice_client
+            await self.voice_client.disconnect()
+            self.voice_client = await self.voice_channel.connect()
+        return self.voice_client
 
     async def disconnect(self):
         """
@@ -109,6 +111,13 @@ class TestInterface:
         if self.voice_channel is None:
             raise NotImplementedError("The Bot isn't connected.")
         await self.voice_client.disconnect()
+
+    async def disconnect_from_channel(self, channel: int):
+        voice_channel = self.client.get_channel(channel)
+        if voice_channel.guild.voice_client is None:
+            print("not connected")
+        else:
+            await voice_channel.guild.voice_client.disconnect()
 
     @staticmethod
     async def edit_message(message, new_content):
@@ -133,9 +142,9 @@ class TestInterface:
 
         def checkReaction(reaction, user):
             return (
-                reaction.message.id == message.id
-                and user == self.target
-                and reaction.message.channel == self.channel
+                    reaction.message.id == message.id
+                    and user == self.target
+                    and reaction.message.channel == self.channel
             )
 
         try:
@@ -201,10 +210,10 @@ class TestInterface:
             raise SyntaxError("Invalid Number of Arguments")
 
     async def assert_embed_equals(
-        self,
-        message: discord.Message,
-        matches: discord.Embed,
-        attributes_to_check: list = None,
+            self,
+            message: discord.Message,
+            matches: discord.Embed,
+            attributes_to_check: list = None,
     ):
         """
         If ``matches`` doesn't match the embed of ``message``, fail the test.
@@ -250,7 +259,7 @@ class TestInterface:
                 if attribute == "image" or attribute == "thumbnail":
                     # Comparison of Embedded Images / Thumbnails
                     if getattr(getattr(embed, attribute), "url") != getattr(
-                        getattr(matches, attribute), "url"
+                            getattr(matches, attribute), "url"
                     ):
                         raise ResponseDidNotMatchError(
                             "The {} attribute did't match".format(attribute)
@@ -258,7 +267,7 @@ class TestInterface:
                 elif attribute == "video":
                     # Comparison of Embedded Video
                     if getattr(getattr(embed, "video"), "url") != getattr(
-                        getattr(matches, "video"), "url"
+                            getattr(matches, "video"), "url"
                     ):
                         raise ResponseDidNotMatchError(
                             "The video attribute did't match"
@@ -266,7 +275,7 @@ class TestInterface:
                 elif attribute == "author":
                     # Comparison of Author
                     if getattr(getattr(embed, "author"), "name") != getattr(
-                        getattr(matches, "author"), "name"
+                            getattr(matches, "author"), "name"
                     ):
                         raise ResponseDidNotMatchError(
                             "The author attribute did't match"
@@ -369,7 +378,7 @@ class TestInterface:
         return await self.assert_message_contains(response, substring)
 
     async def assert_reply_embed_equals(
-        self, message: str, equals: discord.Embed, attributes_to_prove: list = None
+            self, message: str, equals: discord.Embed, attributes_to_prove: list = None
     ):
         response = await self.wait_for_reply(message)
         return await self.assert_embed_equals(
@@ -462,7 +471,7 @@ class TestInterface:
                 raise HumanResponseFailure
 
     async def assert_reply_embed_equals(
-        self, message: str, equals: discord.Embed, attributes_to_check: list = None
+            self, message: str, equals: discord.Embed, attributes_to_check: list = None
     ):
         response = await self.wait_for_reply(message)
         return await self.assert_embed_equals(
