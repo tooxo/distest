@@ -63,7 +63,6 @@ class TestInterface:
         ``assert_reply_*`` tests will send a message with the passed content, while ``assert_message_*`` tests require a
         ``Message`` to be passed to them. This allows for more flexibility when you need it and an easier
         option when you don't.
-
     :param discord.Client client: The discord client of the tester.
     :param discord.TextChannel channel: The discord channel in which to run the tests.
     :param discord.Member target: The bot we're testing.
@@ -205,13 +204,13 @@ class TestInterface:
         matches: discord.Embed,
         attributes_to_check: list = None,
     ):
-        """If ``matches`` doesn't match the embed of ``message``, fail the test.
-
+        """
+        If ``matches`` doesn't match the embed of ``message``, fail the test.
         :param message: original message
         :param matches: embed object to compare to
-        :param attributes_to_check: a string list with the attributes of the embed, which are to compare
-            This are all the Attributes you can prove: "title", "description", "url", "color",
-            "author", "video", "image" and "thumbnail".
+        :param attributes_to_prove: a string list with the attributes of the embed, which are to compare
+        This are all the Attributes you can prove: "title", "description", "url", "color", "author", "video",
+        "image" and "thumbnail".
         :return: message
         :rtype: discord.Message
         """
@@ -367,7 +366,15 @@ class TestInterface:
         response = await self.wait_for_reply(contents)
         return await self.assert_message_contains(response, substring)
 
-    async def assert_reply_matches(self, contents, regex):
+    async def assert_reply_embed_equals(
+        self, message: str, equals: discord.Embed, attributes_to_prove: list = None
+    ):
+        response = await self.wait_for_reply(message)
+        return await self.assert_embed_equals(
+            response, equals, attributes_to_prove=attributes_to_prove
+        )
+
+    async def assert_reply_matches(self, contents: str, regex):
         """ Send a message and wait for a response. If the response does not match a regex, fail the test.
 
         Requires a properly formatted Python regex ready to be used in the ``re`` functions.
