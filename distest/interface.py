@@ -97,8 +97,9 @@ class TestInterface:
         self.voice_channel: discord.VoiceChannel = self.client.get_channel(channel)
         if self.voice_channel.guild.voice_client is None:
             self.voice_client: discord.VoiceClient = await self.voice_channel.connect()
+
         else:
-            self.voice_channel: discord.voice_client = self.voice_channel.guild.voice_client
+            self.voice_client: discord.voice_client = self.voice_channel.guild.voice_client
 
     async def disconnect(self):
         """
