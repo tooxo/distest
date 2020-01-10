@@ -43,3 +43,7 @@ class ResponseDidNotMatchError(TestRequirementFailure):
 
 class ReactionDidNotMatchError(TestRequirementFailure):
     """ Raised when the target bot reacts with the wrong emoji """
+
+
+class ChannelNotFoundError(TestRequirementFailure):
+    """ Raised when the test contains a voice_channel, which doesn't exists. """
