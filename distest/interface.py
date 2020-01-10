@@ -1,20 +1,25 @@
 import enum
 import asyncio
-from concurrent.futures import _base
+
+from asyncio.exceptions import TimeoutError
+# replaced the protected concurrent.futures._base.TimeoutError (alias)
+
 import re
 import discord
 
+# commented out to suppress "unused imports statements"
 from .exceptions import (
-    TestRequirementFailure,
     NoResponseError,
+    #  TestRequirementFailure,
     NoReactionError,
     UnexpectedResponseError,
-    ErrordResponseError,
-    UnexpectedSuccessError,
+    #  ErrordResponseError,
+    #  UnexpectedSuccessError,
     HumanResponseTimeout,
     HumanResponseFailure,
     ResponseDidNotMatchError,
     ReactionDidNotMatchError,
+    ChannelNotFoundError,
 )
 
 SPECIAL_TEST_NAMES = {"all", "unrun", "failed"}
@@ -48,9 +53,9 @@ class Test:
 
 
 class TestInterface:
-    """ All the tests, and some supporting functions. Tests are designed to be run
-    by the tester and mixed together in order to actually test the bot.
+    """All the tests, and some supporting functions.
 
+    Tests are designed to be run by the tester and mixed together in order to actually test the bot.
     .. note::
         In addition to the tests failing due to their own reasons, all tests will also fail if they timeout.
         This period is specified when the bot is run.
@@ -73,8 +78,11 @@ class TestInterface:
         self.client = client
         self.channel = channel
         self.target = target
-        self.voice_channel = None
         self.voice_client = None
+        self.voice_channel = None
+
+        # Add default timeout of never
+        self.client.timeout = None
 
     async def send_message(self, content):
         """ Send a message to the channel the test is being run in. **Helper Function**
@@ -85,17 +93,37 @@ class TestInterface:
         """
         return await self.channel.send(content)
 
+    def _check_message(self, message):
+        return message.channel == self.channel and message.author == self.target
+
     async def connect(self, channel):
+        """
+        Connect to a given VoiceChannel
+        :param channel: The VoiceChannel to connect to.
+        :return: returns the voice client
+        """
         self.voice_channel: discord.VoiceChannel = self.client.get_channel(channel)
-        self.voice_client: discord.VoiceClient = await self.voice_channel.connect()
+        if self.voice_channel is None:
+            raise ChannelNotFoundError("channel not found")
+        if self.voice_channel.guild.voice_client is None:
+            self.voice_client: discord.VoiceClient = await self.voice_channel.connect()
+        else:
+            self.voice_client: discord.voice_client = self.voice_channel.guild.voice_client
+            await self.voice_client.disconnect()
+            self.voice_client = await self.voice_channel.connect()
+        return self.voice_client
 
     async def disconnect(self):
-        if self.voice_channel is None:
-            raise NotImplementedError("The Bot isn't connected.")
-        await self.voice_client.disconnect()
-
-    def _checkMessage(self, message):
-        return message.channel == self.channel and message.author == self.target
+        """
+        Disconnects the bot from the voice channel
+        :return: None
+        """
+        voice_channel = self.client.get_channel(self.channel)
+        if voice_channel.guild.voice_client is None:
+            print("not connected")
+        else:
+            if voice_channel.guild.voice_client is not None:
+                await voice_channel.guild.voice_client.disconnect()
 
     @staticmethod
     async def edit_message(message, new_content):
@@ -118,18 +146,18 @@ class TestInterface:
         :raises NoReactionError:
         """
 
-        def checkReaction(reaction, user):
+        def check_reaction(reaction, user):
             return (
-                reaction.message.id == message.id
-                and user == self.target
-                and reaction.message.channel == self.channel
+                    reaction.message.id == message.id
+                    and user == self.target
+                    and reaction.message.channel == self.channel
             )
 
         try:
             result = await self.client.wait_for(
-                "reaction_add", timeout=self.client.timeout, check=checkReaction
+                "reaction_add", timeout=self.client.timeout, check=check_reaction
             )
-        except _base.TimeoutError:
+        except TimeoutError:
             raise NoReactionError
         else:
             return result
@@ -144,9 +172,9 @@ class TestInterface:
         """
         try:
             result = await self.client.wait_for(
-                "message", timeout=self.client.timeout, check=self._checkMessage
+                "message", timeout=self.client.timeout, check=self._check_message
             )
-        except _base.TimeoutError:
+        except TimeoutError:
             raise NoResponseError
         else:
             return result
@@ -163,36 +191,17 @@ class TestInterface:
         await self.channel.send(content)
         return await self.wait_for_message()
 
-    async def get_delayed_reply(
-        self, seconds_to_wait, assert_function, argument_list=None
-    ):
-        if argument_list is None:
-            argument_list = []
-        await asyncio.sleep(seconds_to_wait)
-        message: discord.Message = self.channel.last_message
-        if len(argument_list) == 2:
-            return await assert_function(message, argument_list[0], argument_list[1])
-        elif len(argument_list) == 3:
-            return await assert_function(
-                message,
-                argument_list[0],
-                argument_list[1],
-                attributes_to_prove=argument_list[2],
-            )
-        else:
-            raise SyntaxError("Invalid Number of Arguments")
-
     async def assert_embed_equals(
-        self,
-        message: discord.Message,
-        matches: discord.Embed,
-        attributes_to_prove: list = None,
+            self,
+            message: discord.Message,
+            matches: discord.Embed,
+            attributes_to_check: list = None,
     ):
         """
         If ``matches`` doesn't match the embed of ``message``, fail the test.
         :param message: original message
         :param matches: embed object to compare to
-        :param attributes_to_prove: a string list with the attributes of the embed, which are to compare
+        :param attributes_to_check: a string list with the attributes of the embed, which are to compare
         This are all the Attributes you can prove: "title", "description", "url", "color", "author", "video",
         "image" and "thumbnail".
         :return: message
@@ -209,14 +218,15 @@ class TestInterface:
             "video",
             "image",
             "thumbnail",
+            "fields",
         ]
         # View all (visible) attributes visualized here: https://imgur.com/a/tD7Ibc4
 
         attributes = []
 
         # Proves, if the attribute provided by the user is a valid attribute to check
-        if attributes_to_prove is not None:
-            for value in attributes_to_prove:
+        if attributes_to_check is not None:
+            for value in attributes_to_check:
                 if value not in possible_attributes:
                     raise NotImplementedError(
                         '"' + value + '" is not a possible value.'
@@ -231,7 +241,7 @@ class TestInterface:
                 if attribute == "image" or attribute == "thumbnail":
                     # Comparison of Embedded Images / Thumbnails
                     if getattr(getattr(embed, attribute), "url") != getattr(
-                        getattr(matches, attribute), "url"
+                            getattr(matches, attribute), "url"
                     ):
                         raise ResponseDidNotMatchError(
                             "The {} attribute did't match".format(attribute)
@@ -239,7 +249,7 @@ class TestInterface:
                 elif attribute == "video":
                     # Comparison of Embedded Video
                     if getattr(getattr(embed, "video"), "url") != getattr(
-                        getattr(matches, "video"), "url"
+                            getattr(matches, "video"), "url"
                     ):
                         raise ResponseDidNotMatchError(
                             "The video attribute did't match"
@@ -247,22 +257,30 @@ class TestInterface:
                 elif attribute == "author":
                     # Comparison of Author
                     if getattr(getattr(embed, "author"), "name") != getattr(
-                        getattr(matches, "author"), "name"
+                            getattr(matches, "author"), "name"
                     ):
                         raise ResponseDidNotMatchError(
                             "The author attribute did't match"
                         )
-                elif getattr(embed, attribute) != getattr(matches, attribute):
+                elif attribute == "fields":
+                    pairs = []
+                    for field in matches.fields:
+                        pairs.append({"name": field.name, "value": field.value})
+                    for field in embed.fields:
+                        if {"name": field.name, "value": field.value} not in pairs:
+                            raise ResponseDidNotMatchError
+                elif not getattr(embed, attribute) == getattr(matches, attribute):
                     print(
                         "Did not match:",
                         attribute,
                         getattr(embed, attribute),
                         getattr(matches, attribute),
                     )
-                    raise ResponseDidNotMatchError()
+                    raise ResponseDidNotMatchError
         return message
 
-    async def assert_message_equals(self, message, matches):
+    @staticmethod
+    async def assert_message_equals(message, matches):
         """ If ``message`` does not match a string exactly, fail the test.
 
         :param discord.Message message: The message to test.
@@ -275,7 +293,8 @@ class TestInterface:
             raise ResponseDidNotMatchError
         return message
 
-    async def assert_message_contains(self, message, substring):
+    @staticmethod
+    async def assert_message_contains(message, substring):
         """ If `message` does not contain the given substring, fail the test.
 
         :param discord.Message message: The message to test.
@@ -288,7 +307,8 @@ class TestInterface:
             raise ResponseDidNotMatchError
         return message
 
-    async def assert_message_matches(self, message, regex):
+    @staticmethod
+    async def assert_message_matches(message, regex):
         """ If `message` does not match a regex, fail the test.
 
         Requires a properly formatted Python regex ready to be used in the ``re`` functions.
@@ -304,7 +324,8 @@ class TestInterface:
             raise ResponseDidNotMatchError
         return message
 
-    async def assert_message_has_image(self, message):
+    @staticmethod
+    async def assert_message_has_image(message: discord.Message):
         """ Assert `message` has an attachment. If not, fail the test.
 
         :param discord.Message message: The message to test.
@@ -342,14 +363,6 @@ class TestInterface:
         response = await self.wait_for_reply(contents)
         return await self.assert_message_contains(response, substring)
 
-    async def assert_reply_embed_equals(
-        self, message: str, equals: discord.Embed, attributes_to_prove: list = None
-    ):
-        response = await self.wait_for_reply(message)
-        return await self.assert_embed_equals(
-            response, equals, attributes_to_prove=attributes_to_prove
-        )
-
     async def assert_reply_matches(self, contents: str, regex):
         """ Send a message and wait for a response. If the response does not match a regex, fail the test.
 
@@ -360,7 +373,6 @@ class TestInterface:
         :returns: The reply.
         :rtype: discord.Message
         :raises: ResponseDidNotMatchError
-        develop
         """
         response = await self.wait_for_reply(contents)
         return await self.assert_message_matches(response, regex)
@@ -400,9 +412,9 @@ class TestInterface:
         """
         try:
             await self.client.wait_for(
-                "message", timeout=self.client.timeout, check=self._checkMessage
+                "message", timeout=self.client.timeout, check=self._check_message
             )
-        except _base.TimeoutError:
+        except TimeoutError:
             pass
         else:
             raise UnexpectedResponseError
@@ -429,9 +441,38 @@ class TestInterface:
             reaction: discord.Reaction = await self.client.wait_for(
                 "reaction_add", timeout=self.client.timeout, check=check
             )
-        except _base.TimeoutError:
+        except TimeoutError:
             raise HumanResponseTimeout
         else:
             reaction, _ = reaction
             if reaction.emoji == "\u274c":
                 raise HumanResponseFailure
+
+    async def assert_reply_embed_equals(
+            self, message: str, equals: discord.Embed, attributes_to_check: list = None
+    ):
+        response = await self.wait_for_reply(message)
+        return await self.assert_embed_equals(
+            response, equals, attributes_to_check=attributes_to_check
+        )
+
+    async def get_last_visible_message(self):
+        """
+        Returns the last message currently visible in the channel, deleted messages wont be returned.
+        :return: last visible message
+        """
+        messages = await self.channel.history(limit=10).flatten()
+        for message in messages.reverse():
+            if message is None:
+                continue
+            else:
+                return message
+        return None
+
+    async def get_last_message(self):
+        """
+        Returns the last message period, if the message was deleted before or the tester was not online while the
+        message was typed, it returns None.
+        :return: last message or None
+        """
+        return self.channel.last_message
