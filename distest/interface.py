@@ -1,7 +1,7 @@
 import enum
 import asyncio
 
-from asyncio.exceptions import TimeoutError
+from asyncio import TimeoutError
 # replaced the protected concurrent.futures._base.TimeoutError (alias)
 
 import re
