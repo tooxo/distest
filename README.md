@@ -103,32 +103,3 @@ Please open an issue for your contribution and tag it with contribution to discu
 * Make sure that your issue goes onto the project, that's how we keep track of to-do and in progress things.
 
 * Also, if you just want to propose an idea, create an issue and tag it with enhancement. Thank you for your help!
-
-
-
-
-## TODO
-
-I used to use this, now using the GitHib project instead. This will no longer be used.
-
-- [x] Update the Bot to the newly re-written discord.py 1.0
-- [ ] Verify each test and add to `example_tests.py`
-    - [ ] send_message
-    - [ ] edit_message
-    - [ ] wait_for_reaction
-    - [ ] wait_for_message
-    - [ ] wait_for_reply
-    - [ ] assert_message_equals
-    - [x] assert_message_contains
-    - [ ] assert_message_matches
-    - [x] assert_reply_equals
-    - [x] assert_reply_contains
-    - [x] assert_reply_matches
-    - [x] assert_reaction_equals
-    - [x] ensure_silence
-    - [x] ask_human
-- [x] Allow running tests from the command line
-    - [x] Add CLI mode section to the readme
-    - [x] Have the bot return exit codes depending on test status
-- [ ] More test types
-- [ ] Prep for pip, get it packaged

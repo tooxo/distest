@@ -64,11 +64,11 @@ async def test_embed_matches(interface):
             url="http://www.example.com",
             color=0x00FFCC,
         )
-        .set_author(name="Author")
-        .set_thumbnail(
+            .set_author(name="Author")
+            .set_thumbnail(
             url="https://upload.wikimedia.org/wikipedia/commons/4/40/Test_Example_%28cropped%29.jpg"
         )
-        .set_image(
+            .set_image(
             url="https://upload.wikimedia.org/wikipedia/commons/4/40/Test_Example_%28cropped%29.jpg"
         )
     )
@@ -88,6 +88,21 @@ async def test_embed_part_matches(interface):
 @test_collector()
 async def test_reply_has_image(interface):
     await interface.assert_reply_has_image("Post something with an image!")
+
+
+@test_collector()
+async def test_send_message(interface):
+    await asyncio.sleep(1)
+    message = await interface.send_message("This is a test message.")
+    last_message = await interface.get_last_message()
+    await interface.assert_message_contains(last_message, "This is a test message.")
+
+
+@test_collector()
+async def test_message_matches(interface):
+    message = await interface.send_message("eE00")
+    last_message = await interface.get_last_message()
+    await interface.assert_message_matches(last_message, "[eE]{2}\\d{2}")
 
 
 @test_collector()
