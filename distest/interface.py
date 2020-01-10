@@ -82,7 +82,7 @@ class TestInterface:
         self.voice_channel = None
 
         # Add default timeout of never
-        self.client.timeout = None
+        # self.client.timeout = 10
 
     async def send_message(self, content):
         """ Send a message to the channel the test is being run in. **Helper Function**
