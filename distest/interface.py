@@ -118,7 +118,7 @@ class TestInterface:
         Disconnects the bot from the voice channel
         :return: None
         """
-        voice_channel = self.client.get_channel(self.channel)
+        voice_channel = self.client.get_channel(self.channel.id)
         if voice_channel.guild.voice_client is None:
             print("not connected")
         else:
