@@ -38,6 +38,9 @@ class DiscordBot(discord.Client):
         super().__init__()
         self._target_name = target_name.lower()
 
+        if not discord.opus.is_loaded():
+            discord.opus.load_opus("/usr/lib/x86_64-linux-gnu/libopus.so")
+
     def _find_target(self, server: discord.Guild) -> discord.Member:
         """ Confirms that the target user is actually present in the specified guild
 
