@@ -40,8 +40,7 @@ class DiscordBot(discord.Client):
 
         if not discord.opus.is_loaded():
             import os
-            print(os.system("ls /usr/lib/"))
-            print(os.system("ls /usr/lib/x86_64-linux-gnu"))
+            print(os.system("whereis opus"))
             discord.opus.load_opus("/usr/lib/x86_64-linux-gnu/libopus.so")
 
     def _find_target(self, server: discord.Guild) -> discord.Member:
